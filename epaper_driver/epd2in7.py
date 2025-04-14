@@ -27,6 +27,8 @@
 # THE SOFTWARE.
 #
 
+# referenced from https://github.com/waveshareteam/e-Paper
+
 import logging
 import epdconfig
 
