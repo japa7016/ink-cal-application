@@ -1,0 +1,1 @@
+savedcmd_/home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/Module.symvers :=  scripts/mod/modpost -M -m -a      -o /home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/Module.symvers -T /home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/modules.order -i Module.symvers -e 
