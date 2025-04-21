@@ -14,7 +14,7 @@ epd.init()
 font = ImageFont.load_default()
 mst = ZoneInfo("America/Denver")
 # 2) Grab system time
-now = datetime.now(mst).strftime("%Y-%m-%d %H:%M:%S %Z")
+now = datetime.now(mst).strftime("%Y-%m-%d %H:%M:%S")
 
 # 3) Draw it
 image = Image.new('1', (epd.width, epd.height), 255)  # white bg

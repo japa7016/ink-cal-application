@@ -22,10 +22,10 @@ def main():
     epd.init()
     epd.Clear()
 
-    # Read RTC time and apply Denver timezone
-    now = read_rtc0().replace(tzinfo=ZoneInfo("America/Denver"))
-    time_str = now.strftime("%H:%M:%S")
-
+    mst = ZoneInfo("America/Denver")
+    #now = read_rtc0().replace(tzinfo=ZoneInfo("America/Denver"))
+    #time_str = now.strftime("%H:%M:%S")
+    now = read_rtc0().now(mst).strftime("%Y-%m-%d %H:%M:%S")
     # Prepare a 1‑bit image canvas
     W, H = epd.width, epd.height
     img = Image.new('1', (W, H), 255)
