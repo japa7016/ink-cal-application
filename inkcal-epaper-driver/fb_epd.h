@@ -6,7 +6,7 @@
  #undef PDEBUG             
  #ifdef FB_EPD_DEBUG
  #  ifdef __KERNEL__
- #    define PDEBUG(fmt, args...) printk( KERN_DEBUG "aesdchar: " fmt, ## args)
+ #    define PDEBUG(fmt, args...) printk( KERN_DEBUG "fb_epd: " fmt, ## args)
  #  else
  #    define PDEBUG(fmt, args...) fprintf(stderr, fmt, ## args)
  #  endif
