@@ -2,9 +2,9 @@
 #include <linux/init.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
-#include "fb_epd.h"
+#include "fb-epd.h"
 
-#define DEVICE_NAME "fb_epd"
+#define DEVICE_NAME "fb-epd"
 
 static dev_t epd_dev;
 static int epd_major;
@@ -13,13 +13,13 @@ static struct cdev epd_cdev;
 
 static int epd_open(struct inode *inode, struct file *file)
 {
-    PDEBUG("fb_epd: device opened\n");
+    PDEBUG("fb-epd: device opened\n");
     return 0;
 }
 
 static int epd_release(struct inode *inode, struct file *file)
 {
-    PDEBUG("fb_epd: device closed\n");
+    PDEBUG("fb-epd: device closed\n");
     return 0;
 }
 
@@ -37,7 +37,7 @@ static int epd_init(void)
     ret = alloc_chrdev_region(&epd_dev, 0, 1, DEVICE_NAME);
     if (ret < 0)
     {
-        PDEBUG("fb_epd: failed to allocate char device region: %d\n", ret);
+        PDEBUG("fb-epd: failed to allocate char device region: %d\n", ret);
         return ret;
     }
 
@@ -50,11 +50,11 @@ static int epd_init(void)
     if (ret)
     {
         unregister_chrdev_region(epd_dev, 1);
-        PDEBUG("fb_epd: failed to add cdev: %d\n", ret);
+        PDEBUG("fb-epd: failed to add cdev: %d\n", ret);
         return ret;
     }
 
-    PDEBUG("fb_epd: registered char device major=%d minor=%d\n", epd_major, epd_minor);
+    PDEBUG("fb-epd: registered char device major=%d minor=%d\n", epd_major, epd_minor);
     return 0;
 }
 

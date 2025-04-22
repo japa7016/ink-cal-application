@@ -1,1 +1,0 @@
-savedcmd_/home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/fb_epd.mod := printf '%s\n'   main.o | awk '!x[$$0]++ { print("/home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/"$$0) }' > /home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/fb_epd.mod
