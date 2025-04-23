@@ -10,7 +10,7 @@ EXTRA_CFLAGS += $(DEBFLAGS)
 ifneq ($(KERNELRELEASE),)
 # call from kernel build system
 obj-m	:= fb-epd.o
-fb_epd-y := main.o
+fb-epd-y := main.o
 
 else
 

@@ -1,6 +1,6 @@
 #!/bin/sh
-module=fb_epd
-device=fb_epd
+module=fb-epd
+device=fb-epd
 mode="666"
 cd `dirname $0`
 set -e

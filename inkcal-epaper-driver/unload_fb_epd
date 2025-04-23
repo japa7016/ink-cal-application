@@ -1,6 +1,6 @@
 #!/bin/sh
-module=fb_epd
-device=fb_epd
+module=fb-epd
+device=fb-epd
 cd `dirname $0`
 # invoke rmmod with all arguments we got
 rmmod $module || exit 1
