@@ -1,1 +1,0 @@
-savedcmd_/home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/fb-epd.o := ld -m elf_x86_64 -z noexecstack   -r -o /home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/fb-epd.o @/home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/fb-epd.mod 
