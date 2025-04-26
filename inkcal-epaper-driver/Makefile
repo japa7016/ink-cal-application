@@ -24,3 +24,6 @@ endif
 
 clean:
 	rm -rf *.o *~ core .depend .*.cmd *.ko *.mod.c .tmp_versions
+	
+epddts:
+	dtc -@ -I dts -O dtb -o epd-overlay.dtbo epd-overlay.dts

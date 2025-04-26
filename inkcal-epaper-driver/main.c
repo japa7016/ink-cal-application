@@ -13,18 +13,19 @@ static struct cdev epd_cdev;
 
 static int epd_open(struct inode *inode, struct file *file)
 {
-    PDEBUG("fb-epd: device opened\n");
+    PDEBUG("device opened\n");
     return 0;
 }
 
 static int epd_release(struct inode *inode, struct file *file)
 {
-    PDEBUG("fb-epd: device closed\n");
+    PDEBUG("device closed\n");
     return 0;
 }
 
 static struct file_operations epd_fops = {
     .owner   = THIS_MODULE,
+    
     .open    = epd_open,
     .release = epd_release,
 };
@@ -37,7 +38,7 @@ static int epd_init(void)
     ret = alloc_chrdev_region(&epd_dev, 0, 1, DEVICE_NAME);
     if (ret < 0)
     {
-        PDEBUG("fb-epd: failed to allocate char device region: %d\n", ret);
+        PDEBUG("failed to allocate char device region: %d\n", ret);
         return ret;
     }
 
@@ -50,11 +51,11 @@ static int epd_init(void)
     if (ret)
     {
         unregister_chrdev_region(epd_dev, 1);
-        PDEBUG("fb-epd: failed to add cdev: %d\n", ret);
+        PDEBUG("failed to add cdev: %d\n", ret);
         return ret;
     }
 
-    PDEBUG("fb-epd: registered char device major=%d minor=%d\n", epd_major, epd_minor);
+    PDEBUG("registered char device major=%d minor=%d\n", epd_major, epd_minor);
     return 0;
 }
 
