@@ -150,7 +150,7 @@ err_vram:
         return ret;
 }
 
-static void epd_remove(struct spi_device *spi)
+static int epd_remove(struct spi_device *spi)
 {
 	PDEBUG("remove\n");
         struct epd_device *epd = spi_get_drvdata(spi);
@@ -158,6 +158,7 @@ static void epd_remove(struct spi_device *spi)
         fb_dealloc_cmap(&epd->info->cmap);
         vfree(epd->vram);
         framebuffer_release(epd->info);
+        return 0;
 }
 
 
