@@ -4,137 +4,180 @@
 #include <linux/cdev.h>
 #include <linux/fb.h>
 #include <linux/vmalloc.h>
+#include <linux/gpio/consumer.h>
+#include <linux/spi/spi.h>
+#include <linux/delay.h>
 #include "fb-epd.h"
 
-#define DEVICE_NAME "fb-epd"
+#define DRV_NAME  "fb_epd"
 
-static dev_t epd_dev;
-static int epd_major;
-static int epd_minor;
-static struct cdev epd_cdev;
-
-static struct fb_info *epd_fb;
-static void *epd_vram;
-
-static int epd_open(struct inode *inode, struct file *file)
+static void epd_write_cmd(struct epd_device *epd, u8 cmd)
 {
-    PDEBUG("device opened\n");
-    return 0;
+        gpiod_set_value_cansleep(epd->dc, 0);
+        spi_write(epd->spi, &cmd, 1);
 }
 
-static int epd_release(struct inode *inode, struct file *file)
+static void epd_write_data(struct epd_device *epd, const void *buf, size_t len)
 {
-    PDEBUG("device closed\n");
-    return 0;
+        gpiod_set_value_cansleep(epd->dc, 1);
+        spi_write(epd->spi, buf, len);
 }
 
-static struct file_operations epd_fops = {
-    .owner   = THIS_MODULE,
-    
-    .open    = epd_open,
-    .release = epd_release,
+static void epd_wait_busy(struct epd_device *epd)
+{
+        while (!gpiod_get_value_cansleep(epd->busy))
+        {
+               usleep_range(1000, 2000);
+	}
+}
+
+static void epd_refresh_full(struct epd_device *epd)
+{
+	PDEBUG("full refresh\n");
+        gpiod_set_value_cansleep(epd->reset, 0); msleep(10);
+        gpiod_set_value_cansleep(epd->reset, 1); msleep(10);
+
+        epd_write_cmd(epd, 0x01);
+        epd_write_data(epd,(u8[]){0x03,0x00,0x2B,0x2B,0x03},5);
+        epd_write_cmd(epd, 0x04);  
+        epd_wait_busy(epd);
+
+        epd_write_cmd(epd, 0x61);  
+        epd_write_data(epd,(u8[]){0x01,0x08,0x00,0xB0},4);   
+
+        epd_write_cmd(epd, 0x24);  
+        epd_write_data(epd, epd->vram, epd->vram_size);
+
+        epd_write_cmd(epd, 0x22);  
+        epd_write_data(epd,(u8[]){0xF7},1);
+        epd_write_cmd(epd, 0x20);
+        epd_wait_busy(epd);
+        PDEBUG("refresh done\n");
+}
+
+
+static int epd_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
+{
+        struct epd_device *epd = info->par;
+        PDEBUG("ioctl 0x%x\n", cmd);
+
+        if (cmd == FB_EPD_REFRESH_FULL) 
+        {
+                epd_refresh_full(epd);
+                return 0;
+        }
+        return -ENOTTY;
+}
+
+static const struct fb_ops epd_fbops = {
+        .owner        = THIS_MODULE,
+        .fb_read      = fb_sys_read,
+        .fb_write     = fb_sys_write,
+        .fb_fillrect  = sys_fillrect,
+        .fb_copyarea  = sys_copyarea,
+        .fb_imageblit = sys_imageblit,
+        .fb_ioctl     = epd_fb_ioctl,
 };
 
-static int epd_init(void)
+static int epd_probe(struct spi_device *spi)
 {
-    int ret;
-    PDEBUG("Hello, world\n");
+        struct fb_info *info;
+        struct epd_device *epd;
+        int ret;
 
-    ret = alloc_chrdev_region(&epd_dev, 0, 1, DEVICE_NAME);
-    if (ret < 0)
-    {
-        PDEBUG("failed to allocate char device region: %d\n", ret);
-        return ret;
-    }
+	PDEBUG("probe\n");
 
-    epd_major = MAJOR(epd_dev);
-    epd_minor = MINOR(epd_dev);
+        info = framebuffer_alloc(sizeof(*epd), &spi->dev);
+        if (!info)
+        {
+                return -ENOMEM;
+        }
+        epd          = info->par;
+        epd->info    = info; 
 
-    cdev_init(&epd_cdev, &epd_fops);
-    epd_cdev.owner = THIS_MODULE;
-    ret = cdev_add(&epd_cdev, epd_dev, 1);
-    if (ret)
-    {
-        unregister_chrdev_region(epd_dev, 1);
-        PDEBUG("failed to add cdev: %d\n", ret);
-        return ret;
-    }
+        epd->spi = spi;
+        spi_set_drvdata(spi, epd);
 
-    PDEBUG("registered char device major=%d minor=%d\n", epd_major, epd_minor);
-    
-    epd_vram = vzalloc(EPD_STRIDE * EPD_HEIGHT);
-    if (!epd_vram) 
-    {
-        ret = -ENOMEM;
-        goto err_chrdev;
-    }
- 
-    epd_fb = framebuffer_alloc(0, NULL);
-    if (!epd_fb) 
-    {
-        ret = -ENOMEM;
-        goto err_vram;
-    }
-    
-    
-    strscpy(epd_fb->fix.id, "fb_epd", sizeof(epd_fb->fix.id));
-    epd_fb->fix.type = FB_TYPE_PACKED_PIXELS;
-    epd_fb->fix.visual = FB_VISUAL_MONO01;
-    epd_fb->fix.line_length = EPD_STRIDE;
-    epd_fb->fix.smem_start = 0;
-    epd_fb->fix.smem_len = EPD_STRIDE * EPD_HEIGHT;
+        epd->reset = devm_gpiod_get(&spi->dev, "reset", GPIOD_OUT_HIGH);
+        epd->dc    = devm_gpiod_get(&spi->dev, "dc",    GPIOD_OUT_LOW);
+        epd->busy  = devm_gpiod_get(&spi->dev, "busy",  GPIOD_IN);
+        
+        if (IS_ERR(epd->reset) || IS_ERR(epd->dc) || IS_ERR(epd->busy))
+        {
+            return dev_err_probe(&spi->dev,-EINVAL,"Missing GPIOs");
+	}
+	
+        epd->vram_size = EPD_STRIDE * EPD_HEIGHT;
+        epd->vram = vzalloc(epd->vram_size);
+        if (!epd->vram)
+        {
+            return -ENOMEM;
+	}
+	
+        strscpy(info->fix.id,"fb_epd",sizeof(info->fix.id));
+        info->fix.type        = FB_TYPE_PACKED_PIXELS;
+        info->fix.visual      = FB_VISUAL_MONO01;
+        info->fix.line_length = EPD_STRIDE;
+        info->fix.smem_len    = epd->vram_size;
 
-    epd_fb->var.xres = EPD_WIDTH;
-    epd_fb->var.yres = EPD_HEIGHT;
-    epd_fb->var.xres_virtual = EPD_WIDTH;
-    epd_fb->var.yres_virtual = EPD_HEIGHT;
-    epd_fb->var.bits_per_pixel = EPD_BPP;
-    epd_fb->var.red.offset = 0;
-    epd_fb->var.red.length = 1;
-    epd_fb->var.green = epd_fb->var.red;
-    epd_fb->var.blue = epd_fb->var.red;
-    epd_fb->var.grayscale = 1;
+        info->var.xres = info->var.xres_virtual = EPD_WIDTH;
+        info->var.yres = info->var.yres_virtual = EPD_HEIGHT;
+        info->var.bits_per_pixel = 1;
+        info->var.grayscale      = 1;
 
-    epd_fb->fbops = &epd_fbops;
-    epd_fb->screen_base = (char __force __iomem *)epd_vram;
-    epd_fb->screen_size = EPD_STRIDE * EPD_HEIGHT;
+        info->screen_base = (char __force __iomem *)epd->vram;
+        info->screen_size = epd->vram_size;
+        info->fbops       = &epd_fbops;
 
-    ret = register_framebuffer(epd_fb);
-    if (ret) 
-    {
-        PDEBUG("register_framebuffer failed: %d\n", ret);
-        goto err_fb;
-    }
+        ret = fb_alloc_cmap(&info->cmap, 2, 0);
+        if (ret)
+        {
+            goto err_vram;
+	}
+        ret = register_framebuffer(info);
+        if (ret)
+        {
+            goto err_cmap;
+        }
+        dev_info(&spi->dev,"/dev/fb%d ready (%dx%d-1bpp)\n", info->node, EPD_WIDTH, EPD_HEIGHT);
+        return 0;
 
-    PDEBUG("registered /dev/fb%d  (%dx%d-%dbpp)\n", epd_fb->node, EPD_WIDTH, EPD_HEIGHT, EPD_BPP);
-    
-    return 0;
-    
-err_fb:
-    framebuffer_release(epd_fb);
+err_cmap:
+        fb_dealloc_cmap(&info->cmap);
 err_vram:
-    vfree(epd_vram);
-err_chrdev:
-    cdev_del(&epd_cdev);
-    unregister_chrdev_region(epd_dev, 1);
-    return ret;    
+        vfree(epd->vram);
+        framebuffer_release(info);
+        return ret;
 }
 
-static void epd_exit(void)
+static void epd_remove(struct spi_device *spi)
 {
-    unregister_framebuffer(epd_fb);
-    framebuffer_release(epd_fb);
-    vfree(epd_vram);
-    
-    cdev_del(&epd_cdev);
-    unregister_chrdev_region(MKDEV(epd_major, epd_minor), 1);
-    PDEBUG("Goodbye, cruel world\n");
+	PDEBUG("remove\n");
+        struct epd_device *epd = spi_get_drvdata(spi);
+        unregister_framebuffer(epd->info);
+        fb_dealloc_cmap(&epd->info->cmap);
+        vfree(epd->vram);
+        framebuffer_release(epd->info);
 }
 
-module_init(epd_init);
-module_exit(epd_exit);
+
+
+static const struct of_device_id epd_dt_ids[] = {
+        { .compatible = "waveshare,epd" },
+        {}
+};
+MODULE_DEVICE_TABLE(of, epd_dt_ids);
+
+static struct spi_driver epd_driver = {
+        .driver = {
+                .name = DRV_NAME,
+                .of_match_table = epd_dt_ids,
+        },
+        .probe  = epd_probe,
+        .remove = epd_remove,
+};
+module_spi_driver(epd_driver);
 
 MODULE_AUTHOR("Jainil Patel");
+MODULE_DESCRIPTION("Framebuffer driver for Waveshare 2.7-inch e-paper");
 MODULE_LICENSE("Dual BSD/GPL");
-MODULE_DESCRIPTION("E-paper framebuffer character driver");
-

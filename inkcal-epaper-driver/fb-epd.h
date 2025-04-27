@@ -19,12 +19,18 @@
 #define EPD_BPP     1
 #define EPD_STRIDE  (EPD_WIDTH / 8)
  
-static const struct fb_ops epd_fbops = {
-        .owner          = THIS_MODULE,
-        .fb_read        = fb_sys_read,
-        .fb_write       = fb_sys_write,
-        .fb_fillrect    = sys_fillrect,
-        .fb_copyarea    = sys_copyarea,
-        .fb_imageblit   = sys_imageblit,
-};
- #endif
+#define FB_EPD_IOC_MAGIC        'e'
+#define FB_EPD_REFRESH_FULL     _IO(FB_EPD_IOC_MAGIC, 0) 
+
+struct epd_device {
+        struct spi_device *spi;
+        struct fb_info    *info;
+        void              *vram;
+        size_t             vram_size;
+
+        struct gpio_desc  *reset;
+        struct gpio_desc  *dc;
+        struct gpio_desc  *busy;
+}; 
+
+#endif

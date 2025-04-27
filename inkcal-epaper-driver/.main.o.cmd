@@ -1437,6 +1437,22 @@ deps_/home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver
     $(wildcard include/config/BACKLIGHT_CLASS_DEVICE) \
   arch/x86/include/asm/fb.h \
   include/asm-generic/fb.h \
+  include/linux/gpio/consumer.h \
+    $(wildcard include/config/GPIO_SYSFS) \
+  include/linux/spi/spi.h \
+    $(wildcard include/config/SPI_SLAVE) \
+    $(wildcard include/config/SPI) \
+  include/linux/scatterlist.h \
+    $(wildcard include/config/NEED_SG_DMA_LENGTH) \
+    $(wildcard include/config/NEED_SG_DMA_FLAGS) \
+    $(wildcard include/config/DEBUG_SG) \
+    $(wildcard include/config/SGL_ALLOC) \
+    $(wildcard include/config/ARCH_NO_SG_CHAIN) \
+    $(wildcard include/config/SG_POOL) \
+  include/uapi/linux/spi/spi.h \
+  include/linux/delay.h \
+  arch/x86/include/asm/delay.h \
+  include/asm-generic/delay.h \
   /home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/fb-epd.h \
 
 /home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/main.o: $(deps_/home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/main.o)
