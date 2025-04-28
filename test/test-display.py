@@ -15,7 +15,7 @@ def refresh(fbdev="/dev/fb1"):
     	print("Executing Ioctl")
     	fcntl.ioctl(fd, FB_EPD_REFRESH_FULL)
     	print(f"{fbdev} refresh ioctl sent")
-        except OSError as e:
+    except OSError as e:
         print(f"ioctl failed: {e}", file=sys.stderr)
         return 1
     finally:
