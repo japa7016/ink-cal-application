@@ -66,7 +66,7 @@ static void epd_refresh_full(struct epd_device *epd)
     epd_write_data(epd, (u8[]){0xD7,0xD6,0x9D}, 3);
 
     epd_write_cmd(epd, 0x22);
-    epd_write_data(epd, (u8[]){0xC7}, 1);
+    epd_write_data(epd, (u8[]){0xF7}, 1);
     epd_write_cmd(epd, 0x20);
     epd_wait_busy(epd);
 
