@@ -91,6 +91,14 @@ static int epd_probe(struct spi_device *spi)
         epd          = info->par;
         epd->info    = info; 
 
+	spi->mode           = SPI_MODE_0;
+	spi->bits_per_word  = 8;
+	ret = spi_setup(spi);
+	if (ret)
+	{
+	    return dev_err_probe(&spi->dev, ret, "Failed to setup SPI\n");
+	}
+	
         epd->spi = spi;
         spi_set_drvdata(spi, epd);
 
