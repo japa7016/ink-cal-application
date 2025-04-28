@@ -2,7 +2,7 @@
 import fcntl, os, sys
 
 # Must match your driver’s fb-epd.h: _IO('e', 0)
-FB_EPD_REFRESH_FULL = 0x20006500
+FB_EPD_REFRESH_FULL = 0x6500
 
 def refresh(fbdev="/dev/fb1"):
     try:
@@ -13,9 +13,9 @@ def refresh(fbdev="/dev/fb1"):
 
     try:
     	print("Executing Ioctl")
-        fcntl.ioctl(fd, FB_EPD_REFRESH_FULL)
-        print(f"{fbdev} refresh ioctl sent")
-    except OSError as e:
+    	fcntl.ioctl(fd, FB_EPD_REFRESH_FULL)
+    	print(f"{fbdev} refresh ioctl sent")
+        except OSError as e:
         print(f"ioctl failed: {e}", file=sys.stderr)
         return 1
     finally:

@@ -17,6 +17,7 @@ deps_/home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver
     $(wildcard include/config/X86_64) \
     $(wildcard include/config/ARM64) \
     $(wildcard include/config/HAVE_ARCH_COMPILER_H) \
+    $(wildcard include/config/CC_HAS_COUNTED_BY) \
     $(wildcard include/config/CC_HAS_ASM_INLINE) \
   include/linux/compiler_attributes.h \
   include/linux/compiler-gcc.h \
@@ -169,6 +170,7 @@ deps_/home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver
   arch/x86/include/asm/mem_encrypt.h \
     $(wildcard include/config/X86_MEM_ENCRYPT) \
   include/linux/init.h \
+    $(wildcard include/config/MEMORY_HOTPLUG) \
     $(wildcard include/config/HAVE_ARCH_PREL32_RELOCATIONS) \
     $(wildcard include/config/STRICT_KERNEL_RWX) \
     $(wildcard include/config/STRICT_MODULE_RWX) \
@@ -456,7 +458,6 @@ deps_/home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver
     $(wildcard include/config/LRU_GEN_STATS) \
     $(wildcard include/config/LRU_GEN_WALKS_MMU) \
     $(wildcard include/config/MEMCG) \
-    $(wildcard include/config/MEMORY_HOTPLUG) \
     $(wildcard include/config/MEMORY_FAILURE) \
     $(wildcard include/config/PAGE_EXTENSION) \
     $(wildcard include/config/DEFERRED_STRUCT_PAGE_INIT) \
@@ -1071,6 +1072,10 @@ deps_/home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver
   include/linux/device/driver.h \
   arch/x86/include/asm/device.h \
   include/linux/pm_wakeup.h \
+  include/linux/delay.h \
+  arch/x86/include/asm/delay.h \
+  include/asm-generic/delay.h \
+  /home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/fb-epd.h \
   include/linux/fb.h \
     $(wildcard include/config/GUMSTIX_AM200EPD) \
     $(wildcard include/config/FB_NOTIFY) \
@@ -1450,10 +1455,6 @@ deps_/home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver
     $(wildcard include/config/ARCH_NO_SG_CHAIN) \
     $(wildcard include/config/SG_POOL) \
   include/uapi/linux/spi/spi.h \
-  include/linux/delay.h \
-  arch/x86/include/asm/delay.h \
-  include/asm-generic/delay.h \
-  /home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/fb-epd.h \
 
 /home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/main.o: $(deps_/home/jainil8878/AESD/finalproject/ink-cal-application/inkcal-epaper-driver/main.o)
 
