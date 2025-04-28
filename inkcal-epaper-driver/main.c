@@ -39,7 +39,7 @@ static void epd_refresh_full(struct epd_device *epd)
     epd_write_data(epd, (u8[]){0x03,0x00,0x2B,0x2B,0x03}, 5);
 
     epd_write_cmd(epd, 0x44);
-    epd_write_data(epd, (u8[]){0x00, 0x10}, 2);
+    epd_write_data(epd, (u8[]){0x00, 0x20}, 2);
     epd_write_cmd(epd, 0x45);
     epd_write_data(epd, (u8[]){0x00,0x00, 0xAF,0x00}, 4);
 
