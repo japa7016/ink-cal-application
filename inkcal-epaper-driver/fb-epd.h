@@ -1,6 +1,6 @@
  #ifndef FB_EPD_H_
  #define FB_EPD_H_
- 
+
  #define FB_EPD_DEBUG 1  
  
  #undef PDEBUG             
@@ -18,6 +18,12 @@
 #define EPD_HEIGHT  176
 #define EPD_BPP     1
 #define EPD_STRIDE  (EPD_WIDTH / 8)
+
+#include <linux/fb.h>
+#include <linux/vmalloc.h>
+#include <linux/gpio/consumer.h>
+#include <linux/spi/spi.h>
+#include <linux/ioctl.h> 
  
 #define FB_EPD_IOC_MAGIC        'e'
 #define FB_EPD_REFRESH_FULL     _IO(FB_EPD_IOC_MAGIC, 0) 

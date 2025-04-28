@@ -2,10 +2,6 @@
 #include <linux/init.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
-#include <linux/fb.h>
-#include <linux/vmalloc.h>
-#include <linux/gpio/consumer.h>
-#include <linux/spi/spi.h>
 #include <linux/delay.h>
 #include "fb-epd.h"
 
