@@ -60,15 +60,17 @@ static void epd_refresh_full(struct epd_device *epd)
     epd_write_cmd(epd, 0x4F); epd_write_data(epd, (u8[]){0x00,0x00}, 2);
     udelay(2); 
 
-    epd_write_cmd(epd, 0x13);
+    epd_write_cmd(epd, 0x24);
     epd_write_data(epd, epd->vram, epd->vram_size);
 
     epd_write_cmd(epd, 0x0C);
     epd_write_data(epd, (u8[]){0xD7,0xD6,0x9D}, 3);
 
-    epd_write_cmd(epd, 0x12);  
+    epd_write_cmd(epd, 0x22);
+    epd_write_data(epd, (u8[]){0xF7}, 1);
+    epd_write_cmd(epd, 0x20);
     epd_wait_busy(epd);
-    
+
     /* epd_write_cmd(epd, 0x10); */
     /* epd_write_data(epd, (u8[]){0x01}, 1); */
 
