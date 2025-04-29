@@ -43,34 +43,40 @@ static void epd_wait_busy(struct epd_device *epd)
 	}
 }
 
+/* -------- epd_refresh_full() core -------- */
 static void epd_refresh_full(struct epd_device *epd)
 {
-    /* --- Power-on & LUT (run once per boot) --------------------- */
+    const u8 xlut = 0xF7;                /* full update */
+
     gpiod_set_value_cansleep(epd->reset, 0); msleep(10);
     gpiod_set_value_cansleep(epd->reset, 1); msleep(10);
 
-    epd_write_cmd(epd, 0x12);             /* SWRESET   */  epd_wait_busy(epd);
-    epd_write_cmd(epd, 0x04);             /* POWER_ON  */  epd_wait_busy(epd);
+    epd_write_cmd(epd, 0x12); epd_wait_busy(epd);      /* SWRESET */
+    epd_write_cmd(epd, 0x04); epd_wait_busy(epd);      /* POWER_ON */
 
-    /* Load LUT (full-update) */
+    epd_write_cmd(epd, 0x01);                         /* driver out */
+    epd_write_data(epd, (u8[]){0xAF,0x00,0x00}, 3);
+
+    epd_write_cmd(epd, 0x11); epd_write_data(epd, (u8[]){0x03}, 1);
+
+    epd_write_cmd(epd, 0x44); epd_write_data(epd, (u8[]){0x00,0x20}, 2);
+    epd_write_cmd(epd, 0x45); epd_write_data(epd,
+                           (u8[]){0x00,0x00,0xAF,0x00}, 4);
+
+    /* LUT */
     epd_write_cmd(epd, 0x32);
     epd_write_data(epd, lut_full, sizeof(lut_full));
 
-    /* --- Window & address pointers ------------------------------ */
-    epd_write_cmd(epd, 0x01); epd_write_data(epd,(u8[]){0xB0,0x01,0x00},3);
-    epd_write_cmd(epd, 0x11); epd_write_data(epd,(u8[]){0x03},1);      /* X+,Y+ */
-    epd_write_cmd(epd, 0x44); epd_write_data(epd,(u8[]){0x00,0x20},2); /* X:0-32 */
-    epd_write_cmd(epd, 0x45); epd_write_data(epd,(u8[]){0x00,0x00,0xAF,0x00},4);
+    /* Reset RAM pointer **before** bulk write */
+    epd_write_cmd(epd, 0x4E); epd_write_data(epd, (u8[]){0x00}, 1);
+    epd_write_cmd(epd, 0x4F); epd_write_data(epd, (u8[]){0x00,0x00}, 2);
 
-    /* --- Write framebuffer to RAM --------------------------------*/
+    /* Bulk transfer in ≤4 kB chunks */
     epd_write_cmd(epd, 0x24);
-    epd_write_data(epd, epd->vram, epd->vram_size);   /* chunked spi_write() */
+    epd_write_data(epd, epd->vram, epd->vram_size);
 
-    /* --- Trigger refresh -----------------------------------------*/
-    epd_write_cmd(epd, 0x22); epd_write_data(epd,(u8[]){0xF7},1);
+    epd_write_cmd(epd, 0x22); epd_write_data(epd, &xlut, 1);
     epd_write_cmd(epd, 0x20); epd_wait_busy(epd);
-
-    PDEBUG("full refresh done\n");
 }
 
 
