@@ -13,12 +13,27 @@ static void epd_write_cmd(struct epd_device *epd, u8 cmd)
         spi_write(epd->spi, &cmd, 1);
 }
 
-static int epd_write_data(struct epd_device *epd, const void *buf, size_t len)
+static int epd_write_data(struct epd_device *epd, const u8 *buf, size_t len)
 {
-	gpiod_set_value_cansleep(epd->dc, 1); 
-        int ret = 0; 
-        ret = spi_write(epd->spi, buf, len);
-        return ret;
+    int ret = 0;
+
+    gpiod_set_value_cansleep(epd->dc, 1);
+
+    size_t max = spi_max_transfer_size(epd->spi);
+    while (len > 0) 
+    {
+        size_t n = min(len, max);
+        ret = spi_write(epd->spi, buf, n);
+        if (ret) 
+        {
+            PDEBUG("spi_write failed at %zu/%zu: %d\n",
+                   (size_t)(buf - (u8*)epd->vram), epd->vram_size, ret);
+            return ret;
+        }
+        buf += n;
+        len -= n;
+    }
+    return 0;
 }
 
 static void epd_wait_busy(struct epd_device *epd)
@@ -29,7 +44,6 @@ static void epd_wait_busy(struct epd_device *epd)
 	}
 }
 
-/* -------- epd_refresh_full() core -------- */
 static void epd_refresh_full(struct epd_device *epd)
 {
     const u8 xlut = 0xF7;  /* full‐update trigger */
@@ -42,32 +56,7 @@ static void epd_refresh_full(struct epd_device *epd)
 
     /* 2 ── SW reset */
     epd_write_cmd(epd, 0x12);    /* SWRESET */
-    epd_wait_busy(epd);
-
-    /* 3 ── POWER CIRCUIT SETUP (before POWER_ON!) */
-    epd_write_cmd(epd, 0x06);    /* POWER_SETTING */
-    /* VDS_EN=1, VDG_EN=1, VCOM_EN=1 */
-    epd_write_data(epd, (u8[]){0x17, 0x17, 0x17}, 3);
-
-    epd_write_cmd(epd, 0x0C);    /* BOOSTER_SOFT_START */
-    /* timing for power‐up of internal boost converter */
-    epd_write_data(epd, (u8[]){0xD7, 0xD6, 0x9D}, 3);
-
-    epd_write_cmd(epd, 0x2C);    /* VCOM_DC_SETTING */
-    /* VCOM = –1.3V */
-    epd_write_data(epd, (u8[]){0xA8}, 1);
-
-    epd_write_cmd(epd, 0x3A);    /* DUMMY_LINE_PERIOD */
-    /* 4 dummy lines per gate */
-    epd_write_data(epd, (u8[]){0x1A}, 1);
-
-    epd_write_cmd(epd, 0x3B);    /* GATE_LINE_WIDTH */
-    /* 2 µs per line */
-    epd_write_data(epd, (u8[]){0x08}, 1);
-
-    /* 4 ── POWER ON */
-    epd_write_cmd(epd, 0x04);    /* POWER_ON */
-    epd_wait_busy(epd);
+    msleep(10);
 
     /* 5 ── Initial configuration */
     epd_write_cmd(epd, 0x01);    /* DRIVER_OUTPUT_CONTROL */
