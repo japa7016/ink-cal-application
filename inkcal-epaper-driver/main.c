@@ -103,6 +103,7 @@ static const u8 lut_wb[42] = {
 
 static void epd_refresh_full(struct epd_device *epd)
 {
+    int i;
     gpiod_set_value_cansleep(epd->reset, 0);  msleep(10);
     gpiod_set_value_cansleep(epd->reset, 1);  msleep(200);
 
