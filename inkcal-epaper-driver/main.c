@@ -6,6 +6,8 @@
 #include "fb-epd.h"
 
 #define DRV_NAME  "fb_epd"
+#define LO8(x)  ((u8)((x) & 0xFF))
+#define HI8(x)  ((u8)(((x) >> 8) & 0xFF))
 
 static void epd_write_cmd(struct epd_device *epd, u8 cmd)
 {
@@ -44,8 +46,7 @@ static void epd_wait_busy(struct epd_device *epd)
 	}
 }
 
-/* ----------------------- Waveshare V2 waveform tables -------------------- */
-/* VCOM – 44 bytes */
+
 static const u8 lut_vcom_dc[44] = {
     0x00, 0x00,
     0x00, 0x0F, 0x0F, 0x00, 0x00, 0x05,
@@ -57,7 +58,7 @@ static const u8 lut_vcom_dc[44] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-/* WW  – 42 bytes */
+
 static const u8 lut_ww[42] = {
     0x50, 0x0F, 0x0F, 0x00, 0x00, 0x05,
     0x60, 0x32, 0x32, 0x00, 0x00, 0x02,
@@ -68,7 +69,6 @@ static const u8 lut_ww[42] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-/* BW  – 42 bytes (identical pattern) */
 static const u8 lut_bw[42] = {
     0x50, 0x0F, 0x0F, 0x00, 0x00, 0x05,
     0x60, 0x32, 0x32, 0x00, 0x00, 0x02,
@@ -79,7 +79,7 @@ static const u8 lut_bw[42] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-/* BB  – 42 bytes */
+
 static const u8 lut_bb[42] = {
     0xA0, 0x0F, 0x0F, 0x00, 0x00, 0x05,
     0x60, 0x32, 0x32, 0x00, 0x00, 0x02,
@@ -90,7 +90,6 @@ static const u8 lut_bb[42] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-/* WB  – 42 bytes */
 static const u8 lut_wb[42] = {
     0xA0, 0x0F, 0x0F, 0x00, 0x00, 0x05,
     0x60, 0x32, 0x32, 0x00, 0x00, 0x02,
@@ -100,73 +99,64 @@ static const u8 lut_wb[42] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
+
+
 static void epd_refresh_full(struct epd_device *epd)
 {
-    /* ---------- ① hardware reset ---------- */
     gpiod_set_value_cansleep(epd->reset, 0);  msleep(10);
     gpiod_set_value_cansleep(epd->reset, 1);  msleep(200);
 
-    /* ---------- ② power-up sequence ---------- */
-    epd_write_cmd(epd, 0x01);                       /* POWER_SETTING        */
+    epd_write_cmd(epd, 0x01);                
     epd_write_data(epd,(u8[]){0x03,0x00,0x2B,0x2B,0x09},5);
 
-    epd_write_cmd(epd, 0x06);                       /* BOOSTER_SOFT_START   */
+    epd_write_cmd(epd, 0x06);
     epd_write_data(epd,(u8[]){0x07,0x07,0x17},3);
 
-    epd_write_cmd(epd, 0x04);                       /* POWER_ON             */
+    epd_write_cmd(epd, 0x04);
     epd_wait_busy(epd);
 
-    /* ---------- ③ panel + VCOM ---------- */
-    epd_write_cmd(epd, 0x00);                       /* PANEL_SETTING        */
-    epd_write_data(epd,(u8[]){0xAF},1);             /* KW-BF, normal scan   */
+    epd_write_cmd(epd, 0x00);                      
+    epd_write_data(epd,(u8[]){0xAF},1);          
 
-    epd_write_cmd(epd, 0x30);                       /* PLL_CONTROL          */
-    epd_write_data(epd,(u8[]){0x3A},1);             /* 100 Hz               */
+    epd_write_cmd(epd, 0x30);                   
+    epd_write_data(epd,(u8[]){0x3A},1);          
 
-    epd_write_cmd(epd, 0x82);                       /* VCOM_DC_SETTING      */
+    epd_write_cmd(epd, 0x82);                 
     epd_write_data(epd,(u8[]){0x12},1);
 
-    epd_write_cmd(epd, 0x50);                       /* VCOM & DATA INTERVAL */
-    epd_write_data(epd,(u8[]){0x97},1);             /* border = LUT1        */
+    epd_write_cmd(epd, 0x50);                    
+    epd_write_data(epd,(u8[]){0x97},1);           
 
-    /* ---------- ④ resolution ---------- */
-    epd_write_cmd(epd, 0x61);                       /* TRES                 */
-    epd_write_data(epd,(u8[]){0x01,0x08,           /* 0x108 = 264          */
-                              0x00,BYTE(176)},3);  /* 176 rows             */
+    epd_write_cmd(epd, 0x61);                     
+    epd_write_data(epd,(u8[]){0x01,0x08, 0x00,BYTE(176)},3); 
 
-    /* ---------- ⑤ LUT (factory OTP) ---------- */
-    epd_write_cmd(epd, 0x20);                       /* VCOM                 */
-    for (int i = 0; i < 44; i++)
-        epd_write_data(epd, (u8[]){EPD_2in7_lut_vcom_dc[i]}, 1);   /* from WS table */
+    epd_write_cmd(epd, 0x20);                  
+    for (i = 0; i < 44; i++)
+        epd_write_data(epd, (u8[]){EPD_2in7_lut_vcom_dc[i]}, 1);  
 
-    epd_write_cmd(epd, 0x21);                       /* WW                   */
-    for (int i = 0; i < 42; i++)
+    epd_write_cmd(epd, 0x21);
+    for (i = 0; i < 42; i++)
         epd_write_data(epd, (u8[]){EPD_2in7_lut_ww[i]}, 1);
 
-    epd_write_cmd(epd, 0x22);                       /* BW                   */
-    for (int i = 0; i < 42; i++)
+    epd_write_cmd(epd, 0x22);
+    for (i = 0; i < 42; i++)
         epd_write_data(epd, (u8[]){EPD_2in7_lut_bw[i]}, 1);
 
-    epd_write_cmd(epd, 0x23);                       /* WB                   */
-    for (int i = 0; i < 42; i++)
+    epd_write_cmd(epd, 0x23);
+    for (i = 0; i < 42; i++)
         epd_write_data(epd, (u8[]){EPD_2in7_lut_bb[i]}, 1);
 
-    epd_write_cmd(epd, 0x24);                       /* BB                   */
-    for (int i = 0; i < 42; i++)
+    epd_write_cmd(epd, 0x24);
+    for (i = 0; i < 42; i++)
         epd_write_data(epd, (u8[]){EPD_2in7_lut_wb[i]}, 1);
-                                                        /* tables are the 5 × 42-byte
-                                                           arrays from Waveshare’s driver
-                                                           see lines 328-392 :contentReference[oaicite:0]{index=0} */
 
-    /* ---------- ⑥ RAM pointer & write image ---------- */
-    epd_write_cmd(epd, 0x4E);  epd_write_data(epd,(u8[]){0x00},1);          /* X-ptr */
-    epd_write_cmd(epd, 0x4F);  epd_write_data(epd,(u8[]){0xB0,0x01},2);     /* Y-ptr */
+    epd_write_cmd(epd, 0x4E);  epd_write_data(epd,(u8[]){0x00},1);     
+    epd_write_cmd(epd, 0x4F);  epd_write_data(epd,(u8[]){0xB0,0x01},2);    
     epd_wait_busy(epd);
 
-    epd_write_cmd(epd, 0x24);                               /* WRITE_RAM */
-    epd_write_data(epd, epd->vram, epd->vram_size);         /* chunked   */
+    epd_write_cmd(epd, 0x24);                            
+    epd_write_data(epd, epd->vram, epd->vram_size);
 
-    /* ---------- ⑦ refresh ---------- */
     epd_write_cmd(epd, 0x22);  epd_write_data(epd,(u8[]){0xF7},1);
     epd_write_cmd(epd, 0x20);
     epd_wait_busy(epd);
