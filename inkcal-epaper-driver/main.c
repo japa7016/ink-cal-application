@@ -46,68 +46,54 @@ static void epd_wait_busy(struct epd_device *epd)
 
 static void epd_refresh_full(struct epd_device *epd)
 {
-    const u8 xlut = 0xF7;  /* full‐update trigger */
-
-    /* 1 ── HW reset */
+    /* ① hardware reset ------------------------------------------------ */
     gpiod_set_value_cansleep(epd->reset, 0);
     msleep(10);
     gpiod_set_value_cansleep(epd->reset, 1);
     msleep(10);
 
-    /* 2 ── SW reset */
-    epd_write_cmd(epd, 0x12);    /* SWRESET */
-    msleep(10);
-
-    /* 5 ── Initial configuration */
-    epd_write_cmd(epd, 0x01);    /* DRIVER_OUTPUT_CONTROL */
-    /* 0xAF = 175 = rows–1, 0x00 = high byte, 0x00 = normal scan */
-    epd_write_data(epd, (u8[]){0xAF, 0x00, 0x00}, 3);
-
-    epd_write_cmd(epd, 0x11);    /* DATA_ENTRY_MODE */
-    /* X+, Y+ */
-    epd_write_data(epd, (u8[]){0x03}, 1);
-
-    epd_write_cmd(epd, 0x44);    /* RAM_X_ADDRESS_START_END */
-    /* 0 → 32 (33 bytes = 264 px) */
-    epd_write_data(epd, (u8[]){0x00, 0x20}, 2);
-
-    epd_write_cmd(epd, 0x45);    /* RAM_Y_ADDRESS_START_END */
-    /* 0 → 175 (176 rows) */
-    epd_write_data(epd, (u8[]){0x00, 0x00, 0xAF, 0x00}, 4);
-
-    epd_write_cmd(epd, 0x3C);    /* BORDER_WAVEFORM_CONTROL */
-    /* full‐update border pulse */
-    epd_write_data(epd, (u8[]){0x05}, 1);
-
-    /* 6 ── Load waveform LUT from OTP */
-    epd_write_cmd(epd, 0x18);    /* TEMPERATURE_SENSOR_CONTROL */
-    epd_write_data(epd, (u8[]){0x80}, 1);  /* internal TS */
-
-    epd_write_cmd(epd, 0x22);    /* DISPLAY_UPDATE_CONTROL_2 */
-    epd_write_data(epd, (u8[]){0xB1}, 1);  /* load LUT from OTP */
-    epd_write_cmd(epd, 0x20);    /* MASTER_ACTIVATION */
+    /* ② software reset ------------------------------------------------ */
+    epd_write_cmd(epd, 0x12);
     epd_wait_busy(epd);
 
-    /* 7 ── RAM pointer to (0,0) */
-    epd_write_cmd(epd, 0x4E);    /* RAM_X_ADDRESS_COUNTER */
-    epd_write_data(epd, (u8[]){0x00}, 1);
+    /* ③ power-up / booster parameters -------------------------------- */
+    epd_write_cmd(epd, 0x06);                 /* BOOSTER_SOFT_START       */
+    epd_write_data(epd,(u8[]){0x17,0x17,0x17},3);
 
-    epd_write_cmd(epd, 0x4F);    /* RAM_Y_ADDRESS_COUNTER */
-    epd_write_data(epd, (u8[]){0x00, 0x00}, 2);
-    udelay(2);                     /* ≥2 µs settle */
+    epd_write_cmd(epd, 0x04);                 /* POWER_ON                 */
+    epd_wait_busy(epd);
 
-    /* 8 ── Write image */
-    epd_write_cmd(epd, 0x24);    /* WRITE_RAM */
+    epd_write_cmd(epd, 0x00);                 /* PANEL_SETTING            */
+    epd_write_data(epd,(u8[]){0x1F},1);       /* KW-B/W, LUT from OTP     */
+
+    epd_write_cmd(epd, 0x50);                 /* VCOM AND DATA INTERVAL   */
+    epd_write_data(epd,(u8[]){0x97},1);       /* border: LUT1, VBD hi-Z   */
+
+    /* ④ resolution & scan direction ---------------------------------- */
+    epd_write_cmd(epd, 0x61);                 /* TRES (width-height)      */
+    epd_write_data(epd,(u8[]){0x01,0x08,0x00},3);   /* 0x108 = 264, 0x00B0 = 176 */
+
+    epd_write_cmd(epd, 0x15);                 /* DUSPI (data length)      */
+    epd_write_data(epd,(u8[]){0x00},1);
+
+    /* ⑤ set RAM pointer top-left ------------------------------------- */
+    epd_write_cmd(epd, 0x16);                 /* GSST (gate start)        */
+    epd_write_data(epd,(u8[]){0x00},1);
+
+    epd_write_cmd(epd, 0x4E);                 /* X_POINTER */
+    epd_write_data(epd,(u8[]){0x00},1);
+    epd_write_cmd(epd, 0x4F);                 /* Y_POINTER */
+    epd_write_data(epd,(u8[]){0xB0,0x01},2);
+    epd_wait_busy(epd);
+
+    /* ⑥ write black-white RAM ---------------------------------------- */
+    epd_write_cmd(epd, 0x24);
     epd_write_data(epd, epd->vram, epd->vram_size);
 
-    /* 9 ── Soft‐start again before refresh */
-    epd_write_cmd(epd, 0x0C);    /* BOOSTER_SOFT_START */
-    epd_write_data(epd, (u8[]){0xD7, 0xD6, 0x9D}, 3);
-
-    /* 10 ── Trigger full update */
-    epd_write_cmd(epd, 0x22);    /* DISPLAY_UPDATE_CONTROL_2 */
-    epd_write_data(epd, &xlut, 1);
-    epd_write_cmd(epd, 0x20);    /* MASTER_ACTIVATION */
+    /* ⑦ display refresh ---------------------------------------------- */
+    epd_write_cmd(epd, 0x22);                 /* DISPLAY_UPDATE_CTRL2 */
+    epd_write_data(epd,(u8[]){0xF7},1);       /* LUT0 + LUT1 full update  */
+    epd_write_cmd(epd, 0x20);                 /* MASTER_ACTIVATION  */
     epd_wait_busy(epd);
 
     PDEBUG("full refresh done\n");
