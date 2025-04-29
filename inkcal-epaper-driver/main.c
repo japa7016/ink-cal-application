@@ -13,7 +13,7 @@ static void epd_write_cmd(struct epd_device *epd, u8 cmd)
         spi_write(epd->spi, &cmd, 1);
 }
 
-static void epd_write_data(struct epd_device *epd, const void *buf, size_t len)
+static int epd_write_data(struct epd_device *epd, const void *buf, size_t len)
 {
         size_t max = spi_max_transfer_size(epd->spi);
         int ret = 0;
