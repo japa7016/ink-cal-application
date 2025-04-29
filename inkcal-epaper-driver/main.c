@@ -21,7 +21,7 @@ static void epd_write_data(struct epd_device *epd, const void *buf, size_t len)
 
 static void epd_wait_busy(struct epd_device *epd)
 {
-        while (!gpiod_get_value_cansleep(epd->busy))
+        while (gpiod_get_value_cansleep(epd->busy))
         {
                usleep_range(1000, 2000);
 	}
