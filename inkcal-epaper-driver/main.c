@@ -15,8 +15,17 @@ static void epd_write_cmd(struct epd_device *epd, u8 cmd)
 
 static void epd_write_data(struct epd_device *epd, const void *buf, size_t len)
 {
-        gpiod_set_value_cansleep(epd->dc, 1);
-        spi_write(epd->spi, buf, len);
+        size_t max = spi_max_transfer_size(epd->spi);
+        int ret = 0;
+
+        while (len && !ret) 
+        {
+                size_t n = min(len, max);
+                ret = spi_write(epd->spi, buf, n);
+                buf += n;
+                len -= n;
+        }
+        return ret;
 }
 
 static void epd_wait_busy(struct epd_device *epd)
