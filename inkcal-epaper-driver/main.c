@@ -38,53 +38,34 @@ static void epd_wait_busy(struct epd_device *epd)
 
 static void epd_refresh_full(struct epd_device *epd)
 {
+    /* --- Power-on & LUT (run once per boot) --------------------- */
     gpiod_set_value_cansleep(epd->reset, 0); msleep(10);
     gpiod_set_value_cansleep(epd->reset, 1); msleep(10);
 
-    epd_write_cmd(epd, 0x12);
-    epd_wait_busy(epd);                   
+    epd_write_cmd(epd, 0x12);             /* SWRESET   */  epd_wait_busy(epd);
+    epd_write_cmd(epd, 0x04);             /* POWER_ON  */  epd_wait_busy(epd);
 
-    epd_write_cmd(epd, 0x01);
-    epd_write_data(epd, (u8[]){0x03,0x00,0x2B,0x2B,0x03}, 5);
+    /* Load LUT (full-update) */
+    epd_write_cmd(epd, 0x32);
+    epd_write_data(epd, lut_full, sizeof(lut_full));
 
-    epd_write_cmd(epd, 0x44);
-    epd_write_data(epd, (u8[]){0x00, 0x20}, 2);
-    epd_write_cmd(epd, 0x45);
-    epd_write_data(epd, (u8[]){0x00,0x00, 0xAF,0x00}, 4);
+    /* --- Window & address pointers ------------------------------ */
+    epd_write_cmd(epd, 0x01); epd_write_data(epd,(u8[]){0xB0,0x01,0x00},3);
+    epd_write_cmd(epd, 0x11); epd_write_data(epd,(u8[]){0x03},1);      /* X+,Y+ */
+    epd_write_cmd(epd, 0x44); epd_write_data(epd,(u8[]){0x00,0x20},2); /* X:0-32 */
+    epd_write_cmd(epd, 0x45); epd_write_data(epd,(u8[]){0x00,0x00,0xAF,0x00},4);
 
-    epd_write_cmd(epd, 0x11);
-    epd_write_data(epd, (u8[]){0x03}, 1);
-
-    epd_write_cmd(epd, 0x3C);
-    epd_write_data(epd, (u8[]){0x01}, 1);
-
-    epd_write_cmd(epd, 0x18);
-    epd_write_data(epd, (u8[]){0x80}, 1);
-    epd_write_cmd(epd, 0x22);
-    epd_write_data(epd, (u8[]){0xB1}, 1);          
-    epd_write_cmd(epd, 0x20);
-    epd_wait_busy(epd);
-
-    epd_write_cmd(epd, 0x4E); epd_write_data(epd, (u8[]){0x00}, 1);
-    epd_write_cmd(epd, 0x4F); epd_write_data(epd, (u8[]){0x00,0x00}, 2);
-    udelay(2); 
-
+    /* --- Write framebuffer to RAM --------------------------------*/
     epd_write_cmd(epd, 0x24);
-    epd_write_data(epd, epd->vram, epd->vram_size);
+    epd_write_data(epd, epd->vram, epd->vram_size);   /* chunked spi_write() */
 
-    epd_write_cmd(epd, 0x0C);
-    epd_write_data(epd, (u8[]){0xD7,0xD6,0x9D}, 3);
-
-    epd_write_cmd(epd, 0x22);
-    epd_write_data(epd, (u8[]){0xF7}, 1);
-    epd_write_cmd(epd, 0x20);
-    epd_wait_busy(epd);
-
-    /* epd_write_cmd(epd, 0x10); */
-    /* epd_write_data(epd, (u8[]){0x01}, 1); */
+    /* --- Trigger refresh -----------------------------------------*/
+    epd_write_cmd(epd, 0x22); epd_write_data(epd,(u8[]){0xF7},1);
+    epd_write_cmd(epd, 0x20); epd_wait_busy(epd);
 
     PDEBUG("full refresh done\n");
 }
+
 
 
 static int epd_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
