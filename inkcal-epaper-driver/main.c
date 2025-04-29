@@ -6,14 +6,7 @@
 #include "fb-epd.h"
 
 #define DRV_NAME  "fb_epd"
-static const u8 lut_full[30] = {
-        /* VCOM  */ 0x00, 0x08, 0x00, 0x00, 0x02,
-        /* WW    */ 0x60, 0x28, 0x28, 0x00, 0x00,
-        /* BW    */ 0x40, 0x18, 0x18, 0x00, 0x00,
-        /* WB    */ 0x00, 0x08, 0x00, 0x00, 0x02,
-        /* BB    */ 0x00, 0x18, 0x18, 0x00, 0x00,
-        /* dummy */ 0x13, 0x14, 0x44, 0x12, 0x00
-};
+
 static void epd_write_cmd(struct epd_device *epd, u8 cmd)
 {
         gpiod_set_value_cansleep(epd->dc, 0);
@@ -47,80 +40,89 @@ static void epd_wait_busy(struct epd_device *epd)
 /* -------- epd_refresh_full() core -------- */
 static void epd_refresh_full(struct epd_device *epd)
 {
-    const u8 xlut = 0xF7;  /* full-update waveform trigger */
+    const u8 xlut = 0xF7;  /* full-update trigger */
 
-    /* Hardware reset */
+    /* 1 ── HARDWARE RESET */
     gpiod_set_value_cansleep(epd->reset, 0);
     msleep(10);
     gpiod_set_value_cansleep(epd->reset, 1);
     msleep(10);
 
-    /* Software reset */
-    epd_write_cmd(epd, 0x12);
+    /* 2 ── SOFTWARE RESET */
+    epd_write_cmd(epd, 0x12);   /* SWRESET */
     epd_wait_busy(epd);
 
-    /* ——— Power circuit setup (must come before POWER_ON) ——— */
-    epd_write_cmd(epd, 0x06);                                /* POWER_SETTING */
-    epd_write_data(epd, (u8[]){0x17, 0x17, 0x17}, 3);       /* VDS_EN, VDG_EN, VCOM_EN */
+    /* 3 ── POWER CIRCUIT SETUP (must be BEFORE POWER_ON) */
+    epd_write_cmd(epd, 0x06);   /* POWER_SETTING */
+    epd_write_data(epd, (u8[]){0x17, 0x17, 0x17}, 3);
 
-    epd_write_cmd(epd, 0x0C);                                /* BOOSTER_SOFT_START */
+    epd_write_cmd(epd, 0x0C);   /* BOOSTER_SOFT_START */
     epd_write_data(epd, (u8[]){0xD7, 0xD6, 0x9D}, 3);
 
-    epd_write_cmd(epd, 0x2C);                                /* VCOM_DC_SETTING */
-    epd_write_data(epd, (u8[]){0xA8}, 1);                    /* VCOM = –1.3V */
+    epd_write_cmd(epd, 0x2C);   /* VCOM_DC_SETTING */
+    epd_write_data(epd, (u8[]){0xA8}, 1);
 
-    epd_write_cmd(epd, 0x3A);                                /* DUMMY_LINE_PERIOD */
-    epd_write_data(epd, (u8[]){0x1A}, 1);                    /* 4 dummy lines */
+    epd_write_cmd(epd, 0x3A);   /* DUMMY_LINE_PERIOD */
+    epd_write_data(epd, (u8[]){0x1A}, 1);
 
-    epd_write_cmd(epd, 0x3B);                                /* GATE_LINE_WIDTH */
-    epd_write_data(epd, (u8[]){0x08}, 1);                    /* 2 µs per line */
+    epd_write_cmd(epd, 0x3B);   /* GATE_LINE_WIDTH */
+    epd_write_data(epd, (u8[]){0x08}, 1);
 
-    /* Turn on power circuitry */
-    epd_write_cmd(epd, 0x04);    /* POWER_ON */
+    /* 4 ── POWER_ON */
+    epd_write_cmd(epd, 0x04);   /* POWER_ON */
     epd_wait_busy(epd);
 
-    /* Driver output & scan direction */
-    epd_write_cmd(epd, 0x01);
-    epd_write_data(epd, (u8[]){0xAF, 0x00, 0x00}, 3);       /* 176 rows, normal scan */
+    /* 5 ── INITIAL CONFIGURATION */
+    epd_write_cmd(epd, 0x01);   /* DRIVER_OUTPUT_CONTROL */
+    /* 0xAF = 175 = ROWS–1, 0x00 = high byte, 0x00 = scan dir=normal */
+    epd_write_data(epd, (u8[]){0xAF, 0x00, 0x00}, 3);
 
-    /* Data entry mode: X+, Y+ */
-    epd_write_cmd(epd, 0x11);
-    epd_write_data(epd, (u8[]){0x03}, 1);
+    epd_write_cmd(epd, 0x11);   /* DATA_ENTRY_MODE */
+    epd_write_data(epd, (u8[]){0x03}, 1);  /* X+, Y+ */
 
-    /* RAM X range (0–32 → 264 px) */
-    epd_write_cmd(epd, 0x44);
-    epd_write_data(epd, (u8[]){0x00, 0x20}, 2);
+    epd_write_cmd(epd, 0x44);   /* RAM_X_ADDRESS_START_END */
+    epd_write_data(epd, (u8[]){0x00, 0x20}, 2);  /* 0 → 32 (33 bytes = 264 px) */
 
-    /* RAM Y range (0–175 → 176 rows) */
-    epd_write_cmd(epd, 0x45);
-    epd_write_data(epd, (u8[]){0x00, 0x00, 0xAF, 0x00}, 4);
+    epd_write_cmd(epd, 0x45);   /* RAM_Y_ADDRESS_START_END */
+    epd_write_data(epd, (u8[]){0x00, 0x00, 0xAF, 0x00}, 4);  /* 0 → 175 */
 
-    /* Border waveform (avoid edge ghosting) */
-    epd_write_cmd(epd, 0x3C);
+    epd_write_cmd(epd, 0x3C);   /* BORDER_WAVEFORM_CONTROL */
     epd_write_data(epd, (u8[]){0x05}, 1);
 
-    /* Load full-refresh LUT */
-    epd_write_cmd(epd, 0x32);
-    epd_write_data(epd, lut_full, sizeof(lut_full));
+    /* 6 ── LOAD WAVEFORM LUT FROM OTP */
+    epd_write_cmd(epd, 0x18);   /* TEMPERATURE_SENSOR_CONTROL */
+    epd_write_data(epd, (u8[]){0x80}, 1);
 
-    /* Reset RAM pointer before writing image */
-    epd_write_cmd(epd, 0x4E);
+    epd_write_cmd(epd, 0x22);   /* DISPLAY_UPDATE_CONTROL_2 */
+    epd_write_data(epd, (u8[]){0xB1}, 1);  /* Load LUT from OTP */
+    epd_write_cmd(epd, 0x20);   /* MASTER_ACTIVATION */
+    epd_wait_busy(epd);
+
+    /* 7 ── SET RAM POINTER TO (0,0) */
+    epd_write_cmd(epd, 0x4E);   /* RAM_X_ADDRESS_COUNTER */
     epd_write_data(epd, (u8[]){0x00}, 1);
-    epd_write_cmd(epd, 0x4F);
-    epd_write_data(epd, (u8[]){0x00, 0x00}, 2);
 
-    /* Write every byte of the frame buffer (chunked in epd_write_data()) */
-    epd_write_cmd(epd, 0x24);
+    epd_write_cmd(epd, 0x4F);   /* RAM_Y_ADDRESS_COUNTER */
+    epd_write_data(epd, (u8[]){0x00, 0x00}, 2);
+    udelay(2);  /* ≥2 µs per spec */
+
+    /* 8 ── WRITE IMAGE TO RAM */
+    epd_write_cmd(epd, 0x24);   /* WRITE_RAM */
     epd_write_data(epd, epd->vram, epd->vram_size);
 
-    /* Trigger full update and wait */
-    epd_write_cmd(epd, 0x22);
-    epd_write_data(epd, &xlut, 1);
-    epd_write_cmd(epd, 0x20);
+    /* 9 ── SOFT-START (after RAM write, before refresh) */
+    epd_write_cmd(epd, 0x0C);   /* BOOSTER_SOFT_START again */
+    epd_write_data(epd, (u8[]){0xD7, 0xD6, 0x9D}, 3);
+
+    /* 10 ── TRIGGER FULL REFRESH */
+    epd_write_cmd(epd, 0x22);   /* DISPLAY_UPDATE_CONTROL_2 */
+    epd_write_data(epd, (u8[]){xlut}, 1);
+    epd_write_cmd(epd, 0x20);   /* MASTER_ACTIVATION */
     epd_wait_busy(epd);
 
     PDEBUG("full refresh done\n");
 }
+
 
 
 
