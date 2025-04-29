@@ -132,23 +132,23 @@ static void epd_refresh_full(struct epd_device *epd)
 
     epd_write_cmd(epd, 0x20);                  
     for (i = 0; i < 44; i++)
-        epd_write_data(epd, (u8[]){EPD_2in7_lut_vcom_dc[i]}, 1);  
+        epd_write_data(epd, (u8[]){lut_vcom_dc[i]}, 1);  
 
     epd_write_cmd(epd, 0x21);
     for (i = 0; i < 42; i++)
-        epd_write_data(epd, (u8[]){EPD_2in7_lut_ww[i]}, 1);
+        epd_write_data(epd, (u8[]){lut_ww[i]}, 1);
 
     epd_write_cmd(epd, 0x22);
     for (i = 0; i < 42; i++)
-        epd_write_data(epd, (u8[]){EPD_2in7_lut_bw[i]}, 1);
+        epd_write_data(epd, (u8[]){lut_bw[i]}, 1);
 
     epd_write_cmd(epd, 0x23);
     for (i = 0; i < 42; i++)
-        epd_write_data(epd, (u8[]){EPD_2in7_lut_bb[i]}, 1);
+        epd_write_data(epd, (u8[]){lut_bb[i]}, 1);
 
     epd_write_cmd(epd, 0x24);
     for (i = 0; i < 42; i++)
-        epd_write_data(epd, (u8[]){EPD_2in7_lut_wb[i]}, 1);
+        epd_write_data(epd, (u8[]){lut_wb[i]}, 1);
 
     epd_write_cmd(epd, 0x4E);  epd_write_data(epd,(u8[]){0x00},1);     
     epd_write_cmd(epd, 0x4F);  epd_write_data(epd,(u8[]){0xB0,0x01},2);    
