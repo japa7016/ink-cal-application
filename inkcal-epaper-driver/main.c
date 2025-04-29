@@ -38,7 +38,7 @@ static int epd_write_data(struct epd_device *epd, const u8 *buf, size_t len)
 
 static void epd_wait_busy(struct epd_device *epd)
 {
-        while (gpiod_get_value_cansleep(epd->busy))
+        while (gpiod_get_value_cansleep(epd->busy) == 0)
         {
                usleep_range(1000, 2000);
 	}
@@ -47,10 +47,12 @@ static void epd_wait_busy(struct epd_device *epd)
 static void epd_refresh_full(struct epd_device *epd)
 {
     /* ① hardware reset ------------------------------------------------ */
-    gpiod_set_value_cansleep(epd->reset, 0);
-    msleep(10);
     gpiod_set_value_cansleep(epd->reset, 1);
-    msleep(10);
+    msleep(200);
+    gpiod_set_value_cansleep(epd->reset, 0);
+    msleep(5);
+    gpiod_set_value_cansleep(epd->reset, 1);
+    msleep(200);
 
     /* ② software reset ------------------------------------------------ */
     epd_write_cmd(epd, 0x12);
