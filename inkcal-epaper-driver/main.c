@@ -18,6 +18,7 @@ static int epd_write_data(struct epd_device *epd, const void *buf, size_t len)
 	gpiod_set_value_cansleep(epd->dc, 1); 
         int ret = 0; 
         ret = spi_write(epd->spi, buf, len);
+        return ret;
 }
 
 static void epd_wait_busy(struct epd_device *epd)
