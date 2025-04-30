@@ -17,11 +17,10 @@ static void epd_write_cmd(struct epd_device *epd, u8 cmd)
 
 static int epd_write_data(struct epd_device *epd, const u8 *buf, size_t len)
 {
+    size_t max = spi_max_transfer_size(epd->spi);
     int ret = 0;
 
     gpiod_set_value_cansleep(epd->dc, 1);
-
-    size_t max = spi_max_transfer_size(epd->spi);
     while (len > 0) 
     {
         size_t n = min(len, max);
@@ -129,7 +128,7 @@ static void epd_refresh_full(struct epd_device *epd)
     epd_write_data(epd,(u8[]){0x97},1);           
 
     epd_write_cmd(epd, 0x61);                     
-    epd_write_data(epd,(u8[]){0x01,0x08, 0x00,BYTE(176)},3); 
+    epd_write_data(epd,(u8[]){HI8(264), LO8(264), HI8(176), LO8(176)},4); 
 
     epd_write_cmd(epd, 0x20);                  
     for (i = 0; i < 44; i++)
