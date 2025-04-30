@@ -3,9 +3,8 @@ import sys
 from datetime import datetime
 
 # add your epd2in7_V2 driver folder to the path
-sys.path.insert(1, './lib')
-
-import epd2in7_V2
+#sys.path.insert(1, './lib')
+from inkcal_lib import epd2in7_V2
 from PIL import Image, ImageDraw, ImageFont
 
 # ——— Initialize the V2 display ———
