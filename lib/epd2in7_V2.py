@@ -28,7 +28,7 @@
 #
 
 import logging
-import epdconfig
+from inkcal_lib import epdconfig
 
 # Display resolution
 EPD_WIDTH       = 176
