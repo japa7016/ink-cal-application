@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 from inkcal_lib import epd2in7_V2
 from PIL import Image, ImageDraw, ImageFont
 
-ICS_URL    = "https://calendar.google.com/calendar/ical/…/basic.ics"
+ICS_URL    = "https://calendar.google.com/calendar/ical/jainil8878%40gmail.com/private-251e13d841443b623e03d3679e4ad307/basic.ics"
 LOCAL_TZ   = ZoneInfo("America/Denver")
 
 def fetch_events(date_to_check):
